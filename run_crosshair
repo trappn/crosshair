@@ -1,0 +1,4 @@
+#!/bin/bash
+# alias for running the overlay and capture from a virtualenv
+# (located in ./virtualenvs/crosshair)
+sudo /scripts/.virtualenvs/crosshair/bin/python /scripts/crosshair.py
