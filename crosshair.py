@@ -1,12 +1,83 @@
+import os, sys, inspect
+# realpath() will make the script run, even if you symlink it
+cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile( inspect.currentframe() ))[0]))
+if cmd_folder not in sys.path:
+    sys.path.insert(0, cmd_folder)
+# to include modules from a subfolder
+cmd_subfolder = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"include")))
+if cmd_subfolder not in sys.path:
+    sys.path.insert(0, cmd_subfolder)
+
 import time
 import picamera
 import numpy as np
 import cv2
 import RPi.GPIO as GPIO
+import patterns
+import ConfigParser
 
 # settings from config file:
-width = 1024
-height = 768
+configfile = '/boot/crosshair.cfg'
+cdefaults = {
+            'width': '800',
+            'height': '600',
+            'color': 'white',
+            'pattern': '1',
+            'radius': '100',
+            'xcenter': '400',
+            'ycenter': '300',
+            'stream': 'false',
+            'upload': 'false'
+            }
+
+# if config file is missing, recreate it with default values:
+def CreateConfigFromDef(fileloc,defaults):
+    print "Config file not found."
+    print "Recreating " + fileloc + " using default settings."
+    config.add_section('main')
+    config.add_section('overlay')
+    config.set('overlay', 'xcenter', cdefaults.get('xcenter'))
+    config.set('overlay', 'ycenter', cdefaults.get('ycenter'))
+    #config.set('overlay', '; white (default), red, green, blue, yellow', '')
+    config.set('overlay', 'color', cdefaults.get('color'))
+    config.set('overlay', 'pattern', cdefaults.get('pattern'))
+    config.set('overlay', 'radius', cdefaults.get('radius'))
+    config.set('main', 'width', cdefaults.get('width'))
+    config.set('main', 'height', cdefaults.get('height'))
+    config.set('main', 'upload', cdefaults.get('upload'))
+    config.set('main', 'stream', cdefaults.get('stream'))
+    # write default settings to new config file:
+    with open(fileloc, 'wb') as f:
+        config.write(f)
+
+# try to read settings from config file; if it doesn't exist
+# create one from defaults & use same defaults for this run:
+try:
+    with open(configfile) as f:
+        config = ConfigParser.SafeConfigParser(cdefaults)
+        config.readfp(f)
+except IOError:
+    config = ConfigParser.SafeConfigParser(cdefaults)
+    CreateConfigFromDef(configfile,cdefaults)
+
+# retrieve settings from config parser:
+width = int(config.get('main', 'width'))
+height = int(config.get('main', 'height'))
+print "Set resolution: " + str(width) + "x" + str(height)
+# make sure width is a multiple of 32 and height
+# is a multiple of 16:
+if (width%32) > 0 or (height%16) > 0:
+    print "Rounding down set resolution to match camera block size:"
+    width = width-(width%32)
+    height = height-(height%16)
+    print "New resolution: " + str(width) + "x" + str(height)
+curcol = config.get('overlay', 'color')
+curpat = int(config.get('overlay', 'pattern'))
+xcenter = int(config.get('overlay', 'xcenter'))
+ycenter = int(config.get('overlay', 'ycenter'))
+radius = int(config.get('overlay', 'radius'))
+
+# map colors:
 colors = {
         'white': (255,255,255),
         'red': (255,0,0),
@@ -14,14 +85,6 @@ colors = {
         'blue': (0,0,255),
         'yellow': (255,255,0),
         }
-curcol = 'white'
-curpat = 1
-xcenter = 512
-ycenter = 384
-radius = 77
-
-# number of available patterns:
-maxpat = 10
 
 # initialize toggle for on/off button and gui state:
 togsw = 1
@@ -54,7 +117,7 @@ def toggleonoff(channel):
 
 # function to call when middle button is pressed (GPIO 23):
 def togglepattern(channel):
-    global togsw,o,curpat,maxpat,col,ovl,gui
+    global togsw,o,curpat,col,ovl,gui
     # if overlay is inactive, ignore button:
     if togsw == 0:
         print "Pattern button pressed, but ignored --- Crosshair not visible."
@@ -62,7 +125,7 @@ def togglepattern(channel):
     else:
         curpat += 1
         print "Set new pattern: " + str(curpat) 
-        if curpat > maxpat:     # this number must be adjusted to number of available patterns!
+        if curpat > patterns.maxpat:     # this number must be adjusted to number of available patterns!
             curpat = 1
         if guivisible == 0:
             # reinitialize array:
@@ -115,7 +178,6 @@ GPIO.add_event_detect(24, GPIO.FALLING, callback=toggleonoff, bouncetime=300)
 GPIO.add_event_detect(23, GPIO.FALLING, callback=togglepattern, bouncetime=300)
 GPIO.add_event_detect(18, GPIO.FALLING, callback=togglecolor, bouncetime=300)
 
-
 # map text color names to RGB:
 def colormap(col):
     return colors.get(col, (255,255,255))    # white is default
@@ -135,11 +197,11 @@ def colorcycle(self, value, default='white'):
 
 # function to construct/draw the GUI
 def creategui(target):
-    cv2.putText(target, gui1, (10,630), font, 2, col, 2)
-    cv2.putText(target, gui2, (10,660), font, 2, col, 2)
-    cv2.putText(target, gui3, (10,690), font, 2, col, 2)
-    cv2.putText(target, gui4, (10,720), font, 2, col, 2)
-    cv2.putText(target, gui5, (10,750), font, 2, col, 2)
+    cv2.putText(target, gui1, (10,height-138), font, 2, col, 2)
+    cv2.putText(target, gui2, (10,height-108), font, 2, col, 2)
+    cv2.putText(target, gui3, (10,height-78), font, 2, col, 2)
+    cv2.putText(target, gui4, (10,height-48), font, 2, col, 2)
+    cv2.putText(target, gui5, (10,height-18), font, 2, col, 2)
     cv2.putText(target, 'GUI will vanish after 10s', (10,30), font, 2, col, 2)
     return
 
@@ -153,181 +215,29 @@ def patternswitch(target,guitoggle):
         creategui(gui)
     # cycle through possible patterns:
     if curpat == 1:
-        pattern1(target, xcenter, ycenter, radius, col)
+        patterns.pattern1(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 2:
-        pattern2(target, xcenter, ycenter, radius, col)
+        patterns.pattern2(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 3:
-        pattern3(target, xcenter, ycenter, radius, col)
+        patterns.pattern3(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 4:
-        pattern4(target, xcenter, ycenter, radius, col)
+        patterns.pattern4(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 5:
-        pattern5(target, xcenter, ycenter, radius, col)
+        patterns.pattern5(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 6:
-        pattern6(target, xcenter, ycenter, radius, col)
+        patterns.pattern6(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 7:
-        pattern7(target, xcenter, ycenter, radius, col)
+        patterns.pattern7(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 8:
-        pattern8(target, xcenter, ycenter, radius, col)
+        patterns.pattern8(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 9:
-        pattern9(target, xcenter, ycenter, radius, col)
+        patterns.pattern9(target, width, height, xcenter, ycenter, radius, col)
     if curpat == 10:
-        pattern10(target, xcenter, ycenter, radius, col)
+        patterns.pattern10(target, width, height, xcenter, ycenter, radius, col)
     # Add the overlay directly into layer 3 with transparency;
     # we can omit the size parameter of add_overlay as the
     # size is the same as the camera's resolution
     o = camera.add_overlay(np.getbuffer(target), layer=3, alpha=160)
-    return
-
-# defining functions for all possible patterns follow, 
-# activated by patternswitch function
-
-# pattern1: Bruker style crosshair with circles and ticks
-def pattern1( arr, x, y, rad, col ):
-    cv2.line(arr,(0,y),(width,y),col,1)
-    cv2.line(arr,(x,0),(x,height),col,1)
-    i = 0
-    for i in range(1, 8): 
-        cv2.circle(arr,(x,y),i*rad,col,1)
-        i += 1
-    # ticks on the horizontal axis:
-    intervalh = np.arange(0,width,float(rad)/10)
-    j = 0
-    for i in intervalh:
-        # make every 5th tick longer, omit every 10th tick:
-        diff = int(round(i))
-        if j%5 == 0:    
-            if not j%10 == 0:
-                cv2.line(arr,(x+diff,y-4),(x+diff,y+4),col,1)
-                cv2.line(arr,(x-diff,y-4),(x-diff,y+4),col,1)
-        else:
-            cv2.line(arr,(x+diff,y-2),(x+diff,y+3),col,1)
-            cv2.line(arr,(x-diff,y-2),(x-diff,y+3),col,1)
-        j += 1
-    # ticks on the vertical axis:
-    intervalv = np.arange(0,height,float(rad)/10)
-    l = 0
-    for k in intervalv:
-        # make every 5th and 10th tick longer:
-        diff = int(round(k))
-        if l%5 == 0:    
-            if l%10 == 0:
-                cv2.line(arr,(x-6,y+diff),(x+6,y+diff),col,1)
-                cv2.line(arr,(x-6,y-diff),(x+6,y-diff),col,1)
-            else:
-                cv2.line(arr,(x-4,y+diff),(x+4,y+diff),col,1)
-                cv2.line(arr,(x-4,y-diff),(x+4,y-diff),col,1)
-        else:
-            cv2.line(arr,(x-2,y+diff),(x+2,y+diff),col,1)
-            cv2.line(arr,(x-2,y-diff),(x+2,y-diff),col,1)
-        l += 1
-    return    
-
-# pattern2: simple crosshair with ticks
-def pattern2( arr, x, y, rad, col ):
-    # cv2.circle(arr,(x,y),rad,col,1)
-    cv2.line(arr,(0,y),(width,y),col,1)
-    cv2.line(arr,(x,0),(x,height),col,1)
-    # ticks on the horizontal axis:
-    intervalh = np.arange(0,width,float(rad)/10)
-    j = 0
-    for i in intervalh:
-        # make every 5th and 10th tick longer:
-        diff = int(round(i))
-        if j%5 == 0:    
-            if j%10 == 0:
-                cv2.line(arr,(x+diff,y-6),(x+diff,y+6),col,1)
-                cv2.line(arr,(x-diff,y-6),(x-diff,y+6),col,1)
-            else:
-                cv2.line(arr,(x+diff,y-4),(x+diff,y+4),col,1)
-                cv2.line(arr,(x-diff,y-4),(x-diff,y+4),col,1)
-        else:
-            cv2.line(arr,(x+diff,y-2),(x+diff,y+3),col,1)
-            cv2.line(arr,(x-diff,y-2),(x-diff,y+3),col,1)
-        j += 1
-    # ticks on the vertical axis:
-    intervalv = np.arange(0,height,float(rad)/10)
-    l = 0
-    for k in intervalv:
-        # make every 5th and 10th tick longer:
-        diff = int(round(k))
-        if l%5 == 0:    
-            if l%10 == 0:
-                cv2.line(arr,(x-6,y+diff),(x+6,y+diff),col,1)
-                cv2.line(arr,(x-6,y-diff),(x+6,y-diff),col,1)
-            else:
-                cv2.line(arr,(x-4,y+diff),(x+4,y+diff),col,1)
-                cv2.line(arr,(x-4,y-diff),(x+4,y-diff),col,1)
-        else:
-            cv2.line(arr,(x-2,y+diff),(x+2,y+diff),col,1)
-            cv2.line(arr,(x-2,y-diff),(x+2,y-diff),col,1)
-        l += 1
-    return    
-
-# pattern3: simple crosshair without ticks
-def pattern3( arr, x, y, rad, col ):
-    cv2.line(arr,(0,y),(width,y),col,1)
-    cv2.line(arr,(x,0),(x,height),col,1)
-    return    
-
-# pattern4: simple crosshair with circles (no ticks)
-def pattern4( arr, x, y, rad, col ):
-    cv2.line(arr,(0,y),(width,y),col,1)
-    cv2.line(arr,(x,0),(x,height),col,1)
-    i = 0
-    for i in range(1, 8): 
-        cv2.circle(arr,(x,y),i*rad,col,1)
-        i += 1
-    return    
-
-# pattern5: simple crosshair with one circle (no ticks)
-def pattern5( arr, x, y, rad, col ):
-    cv2.line(arr,(0,y),(width,y),col,1)
-    cv2.line(arr,(x,0),(x,height),col,1)
-    cv2.circle(arr,(x,y),rad,col,1)
-    return    
-
-# pattern6: simple circle
-def pattern6( arr, x, y, rad, col ):
-    cv2.circle(arr,(x,y),rad,col,1)
-    return
-
-# pattern7: small center crosshair
-def pattern7( arr, x, y, rad, col ):
-    cv2.line(arr,(x-10,y),(x+10,y),col,1)
-    cv2.line(arr,(x,y-10),(x,y+10),col,1)
-    return
-
-# pattern8: small center crosshair without center
-def pattern8( arr, x, y, rad, col ):
-    cv2.line(arr,(x-10,y),(x-3,y),col,1)
-    cv2.line(arr,(x,y-10),(x,y-3),col,1)
-    cv2.line(arr,(x+3,y),(x+10,y),col,1)
-    cv2.line(arr,(x,y+3),(x,y+10),col,1)
-    return
-
-# pattern9: only a dot
-def pattern9( arr, x, y, rad, col ):
-    cv2.circle(arr,(x,y),2,col,-1)
-    return
-
-# pattern10: grid
-def pattern10( arr, x, y, rad, col ):
-    global width, height
-    # center lines:
-    cv2.line(arr,(0,y),(width,y),col,1)
-    cv2.line(arr,(x,0),(x,height),col,1)
-    i = rad
-    j = rad
-    # horizontal lines:
-    while i < height:
-        cv2.line(arr,(0,y+i),(width,y+i),col,1)
-        cv2.line(arr,(0,y-i),(width,y-i),col,1)
-        i += rad
-    # vertical lines:
-    while j < width:
-        cv2.line(arr,(x+j,0),(x+j,height),col,1)
-        cv2.line(arr,(x-j,0),(x-j,height),col,1)
-        j += rad
     return
 
 # create array for the overlay:
@@ -340,16 +250,16 @@ gui1 = 'arrows = move center'
 gui2 = 'c       = cycle color'
 gui3 = 'p       = cycle pattern'
 gui4 = '+/-    = scale'
-gui5 = 's       = save settings'
+gui5 = 's/r     = save/revert settings'
 
 with picamera.PiCamera() as camera:
     camera.resolution = (width, height)
     camera.framerate = 24
     # set this to 1 when switching to fullscreen output
     camera.preview_fullscreen = 1
-    camera.preview_window = (0,0,width,height)
+    #camera.preview_window = (0,0,width,height)
     camera.start_preview()
-    camera.annotate_background = 'black'
+    #camera.annotate_background = 'black'
     try:
         # show gui fot 10 seconds:
         patternswitch(gui,1)
