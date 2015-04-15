@@ -7,6 +7,7 @@ Uses Python 2.7 & the following:
 - OpenCV
 - RPi.GPIO
 - picamera
+- configparser
 
 Installation instructions for OpenCV: http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/
 
@@ -16,11 +17,18 @@ http://www.raspberrypi.org/documentation/usage/camera/python/README.md
 Installation instructions for RPi.GPIO:
 http://sourceforge.net/p/raspberry-gpio-python/wiki/install/
 
-You can connect three pushbuttons to the Pi's GPIOs 24,23,18 (and each to GND). These will then toggle the overlay on/off (24) or cycle through crosshair patterns (23) and colors (18).
+I also use a solution for adding comments using Python's configparser suggested by user jcollado:
+http://stackoverflow.com/questions/8533797/adding-comment-with-configparser
 
-/boot/crosshair.cfg stores the settings (so it can be adjusted on the SD card from a Windows machine).
-The file will be created on first start of the program using sensible defaults if it cannot be found.
 The script needs superuser privileges. This is handled by the "run_crosshair" scriptlet.
+If the camera is hooked to microscope optics, the LED should be switched off. The script doesn't do it, but you can just add `disable_camera_led=1` to /boot/config.txt. 
+
+Done features:
+- You can connect three pushbuttons to the Pi's GPIOs 24,23,18 (and each to GND). These will then toggle the overlay on/off (24) or cycle through crosshair patterns (23) and colors (18).
+- /boot/crosshair.cfg stores the settings (so it can be adjusted on the SD card from a Windows machine).
+The file will be created on first start of the program using sensible defaults if it cannot be found.
+- several colors (white, red, green, blue, yellow)
+- several crosshair patterns (10 total)
 
 Planned features:
 - connect a keyboard to change the default settings (and also the crosshair's center and radius)
