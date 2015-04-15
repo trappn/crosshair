@@ -16,6 +16,26 @@ import RPi.GPIO as GPIO
 import patterns
 import ConfigParser
 
+# subclass for ConfigParser to add comments for settings
+# (adapted from jcollado's solution on stackoverflow)
+class ConfigParserWithComments(ConfigParser.ConfigParser):
+    def add_comment(self, section, comment):
+        self.set(section, '; %s' % (comment,), None)
+
+    def write(self, fp):
+        """Write an .ini-format representation of the configuration state."""
+        for section in self._sections:
+            fp.write("[%s]\n" % section)
+            for (key, value) in self._sections[section].items():
+                self._write_item(fp, key, value)
+            fp.write("\n")
+
+    def _write_item(self, fp, key, value):
+        if key.startswith(';') and value is None:
+            fp.write("%s\n" % (key,))
+        else:
+            fp.write("%s = %s\n" % (key, str(value).replace('\n', '\n\t')))
+
 # settings from config file:
 configfile = '/boot/crosshair.cfg'
 cdefaults = {
@@ -38,12 +58,26 @@ def CreateConfigFromDef(fileloc,defaults):
     config.add_section('overlay')
     config.set('overlay', 'xcenter', cdefaults.get('xcenter'))
     config.set('overlay', 'ycenter', cdefaults.get('ycenter'))
-    #config.set('overlay', '; white (default), red, green, blue, yellow', '')
+    config.add_comment('overlay', 'color options: white (default), red, green, blue, yellow')
     config.set('overlay', 'color', cdefaults.get('color'))
+    config.add_comment('overlay', 'pattern options:')
+    config.add_comment('overlay', '1: Bruker style with circles and ticks')
+    config.add_comment('overlay', '2: simple crosshair with ticks')
+    config.add_comment('overlay', '3: simple crosshair without ticks')
+    config.add_comment('overlay', '4: crosshair with circles, no ticks')
+    config.add_comment('overlay', '5: crosshair with one circle, no ticks')
+    config.add_comment('overlay', '6: only one circle')
+    config.add_comment('overlay', '7: small crosshair')
+    config.add_comment('overlay', '8: small crosshair without intersection')
+    config.add_comment('overlay', '9: only a dot')
+    config.add_comment('overlay', '10: grid')
     config.set('overlay', 'pattern', cdefaults.get('pattern'))
+    config.add_comment('overlay', 'set radius (in px) for all circles,')
+    config.add_comment('overlay', 'also controls grid spacing in Pattern 10')
     config.set('overlay', 'radius', cdefaults.get('radius'))
     config.set('main', 'width', cdefaults.get('width'))
     config.set('main', 'height', cdefaults.get('height'))
+    config.add_comment('main', 'uploading and streaming not implemented yet')
     config.set('main', 'upload', cdefaults.get('upload'))
     config.set('main', 'stream', cdefaults.get('stream'))
     # write default settings to new config file:
@@ -54,10 +88,10 @@ def CreateConfigFromDef(fileloc,defaults):
 # create one from defaults & use same defaults for this run:
 try:
     with open(configfile) as f:
-        config = ConfigParser.SafeConfigParser(cdefaults)
+        config = ConfigParserWithComments(cdefaults)
         config.readfp(f)
 except IOError:
-    config = ConfigParser.SafeConfigParser(cdefaults)
+    config = ConfigParserWithComments(cdefaults)
     CreateConfigFromDef(configfile,cdefaults)
 
 # retrieve settings from config parser:
