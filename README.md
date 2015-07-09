@@ -8,6 +8,8 @@ Uses Python 2.7 & the following:
 - RPi.GPIO
 - picamera
 - configparser
+- pyscreenshot
+- scrot (backend for pyscreenshot)
 
 Installation instructions for OpenCV: http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/
 
@@ -29,7 +31,16 @@ Done features:
 The file will be created on first start of the program using sensible defaults if it cannot be found.
 - several colors (white, red, green, blue, yellow)
 - several crosshair patterns (10 total)
+- keyboard interface:
+      arrow keys move center around
+      +/- increase/decrease scale
+      p/c change pattern/color
+      space toggles overlay on/off
+      ESC reverts to original settings
+      s saves current settings to config file
+      q quits program
+- web server (minimal http server provides png screenshot with or without overlay, port and interval can be configured)
 
 Planned features:
-- connect a keyboard to change the default settings (and also the crosshair's center and radius)
-- stream to a web server
+- live video stream
+- sftp file upload
