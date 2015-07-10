@@ -8,8 +8,7 @@ Uses Python 2.7 & the following:
 - RPi.GPIO
 - picamera
 - configparser
-- pyscreenshot
-- scrot (backend for pyscreenshot)
+- some stuff from BaseHTTPServer & SimpleHTTPServer
 
 Installation instructions for OpenCV: http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/
 
@@ -39,7 +38,7 @@ The file will be created on first start of the program using sensible defaults i
       ESC reverts to original settings
       s saves current settings to config file
       q quits program
-- web server (minimal http server provides png screenshot with or without overlay, port and interval can be configured)
+- web server (minimal http server provides png screenshot currently without overlay, port and interval can be configured)
 
 Planned features:
 - live video stream
