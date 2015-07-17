@@ -8,7 +8,8 @@ Uses Python 2.7 & the following:
 - RPi.GPIO
 - picamera
 - configparser
-- some stuff from BaseHTTPServer & SimpleHTTPServer
+- some stuff from BaseHTTPServer & CGIHTTPServer
+- paramiko (for SSH2 protocol)
 
 Installation instructions for OpenCV: http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/
 
@@ -38,8 +39,10 @@ The file will be created on first start of the program using sensible defaults i
       ESC reverts to original settings
       s saves current settings to config file
       q quits program
-- web server (minimal http server provides png screenshot currently without overlay, port and interval can be configured)
+- program can log to a file (off by default to increase SD card lifetime)
+- web server (minimal http server provides png screenshot and metadata, port and interval can be configured)
+- provided default index.html uses a CGI to embed metadata, zoom and crosshair overlay on client can be toggled. Needs javascript on client.
+- sftp file upload (configurable host, username, password, target directory and filenames, metadata text file can be included). Stable vs. network outage: if the server is not reachable within a timeout, the program will just skip&retry during the next cycle.
 
 Planned features:
 - live video stream
-- sftp file upload
