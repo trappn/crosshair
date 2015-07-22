@@ -45,4 +45,4 @@ The file will be created on first start of the program using sensible defaults i
 - sftp file upload (configurable host, username, password, target directory and filenames, metadata text file can be included). Stable vs. network outage: if the server is not reachable within a timeout, the program will just skip&retry during the next cycle.
 
 Planned features:
-- live video stream
+- live video stream (currently not possible due to limitations in picamera)
